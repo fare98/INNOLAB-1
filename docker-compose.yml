@@ -1,0 +1,30 @@
+version: "3.5"
+services:
+  # Orion Context Broker (LD variant)
+  orion:
+    image: quay.io/fiware/orion-ld:1.2.0
+    container_name: quay.io-fiware-orion-ld
+    depends_on:
+      - mongo-db
+    ports:
+      - "1026:1026"
+    command: -dbhost mongo-db -logLevel DEBUG
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "-s", "http://orion:1026/version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # MongoDB Database
+  mongo-db:
+    image: mongodb/mongodb-community-server:5.0.9-ubi8
+    container_name: mongodb4orion
+    ports:
+      - "27017:27017"
+    command: --nojournal
+    volumes:
+      - C:\FHTW\mongodbvolume:/data
+
+volumes:
+  mongodbvolume:
+    external: true
