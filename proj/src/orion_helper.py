@@ -2,20 +2,21 @@ import requests
 
 def fetch_data_from_orion(orion_url):
     try:
-        response = requests.get(orion_url)
+        headers = {"Accept": "application/ld+json"}
+        params = {"type": "Asteroid"}
+        response = requests.get(orion_url, headers=headers, params=params)
         response.raise_for_status()
         data = response.json()
 
         processed_data = []
         for item in data:
-            # Extract coordinates and check if they are valid
-            coordinates = item.get("location", {}).get("coordinates", [])
+            coordinates = item.get("location", {}).get("value", {}).get("coordinates", [])
             if len(coordinates) == 2:
                 processed_data.append({
-                    "name": item.get("name", {}).get("value", "Unknown"),
+                    "name": item.get("https://uri.etsi.org/ngsi-ld/name", {}).get("value", "Unknown"),
                     "latitude": coordinates[1],
                     "longitude": coordinates[0],
-                    "url": item.get("url", {}).get("value", "#")
+                    "url": "#"  # Adjust this if you have a URL field
                 })
         return processed_data
     except requests.RequestException as e:

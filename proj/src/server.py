@@ -9,7 +9,8 @@ from orion_helper import fetch_data_from_orion
 
 # NASA to Orion integration
 NASA_API_URL = "https://data.nasa.gov/resource/gh4g-9sfh.json"
-ORION_URL = "http://localhost:1026/v2/entities"
+ORION_URL = "http://localhost:1026/ngsi-ld/v1/entities"
+NGSI_LD_CONTEXT = "https://uri.etsi.org/ngsi-ld/v1/ngsi-ld-core-context.jsonld"
 
 def fetch_nasa_data():
     response = requests.get(NASA_API_URL)
@@ -18,12 +19,27 @@ def fetch_nasa_data():
 def transform_to_ngsi(nasa_data):
     ngsi_entities = []
     for item in nasa_data:
+        # Ensure that latitude and longitude are present
         if 'geolocation' in item and 'latitude' in item['geolocation'] and 'longitude' in item['geolocation']:
-            # Construct the NGSI entity without the 'id' and 'type' in the attributes
-            entity_attributes = {
+            ngsi_entity = {
+                "id": f"urn:ngsi-ld:Asteroid:{item['id']}",
+                "type": "Asteroid",
+                "@context": NGSI_LD_CONTEXT,
                 "name": {
-                    "type": "Text",
+                    "type": "Property",
                     "value": item.get('name', 'Unknown')
+                },
+                "mass": {
+                    "type": "Property",
+                    "value": item.get('mass', 'Unknown')
+                },
+                "fall": {
+                    "type": "Property",
+                    "value": item.get('fall', 'Unknown')
+                },
+                "year": {
+                    "type": "Property",
+                    "value": item.get('year', 'Unknown')
                 },
                 "location": {
                     "type": "GeoProperty",
@@ -35,64 +51,55 @@ def transform_to_ngsi(nasa_data):
                         ]
                     }
                 }
-                # Add other attributes here if necessary
-            }
-            # The NGSI entity with 'id' and 'type' included separately
-            ngsi_entity = {
-                "id": f"urn:ngsi-ld:Asteroid:{item['id']}",
-                "type": "Asteroid",
-                "attributes": entity_attributes
             }
             ngsi_entities.append(ngsi_entity)
     return ngsi_entities
 
 def send_or_update_entity(entity):
     entity_id = entity['id']
-    entity_type = entity['type']
-    entity_attributes = entity['attributes']
+    headers = {"Content-Type": "application/ld+json", "Accept": "application/ld+json"}
+    get_response = requests.get(f"{ORION_URL}/{entity_id}", headers=headers)
 
-    # Headers for NGSI-LD
-    headers = {
-        "Content-Type": "application/ld+json",
-        "Accept": "application/ld+json"
-    }
-
-    # Check if the entity exists
-    get_response = requests.get(f"{ORION_URL}/ngsi-ld/v1/entities/{entity_id}", headers=headers)
-    
     if get_response.status_code == 200:
         # The entity already exists, so we update it
-        update_response = requests.patch(f"{ORION_URL}/ngsi-ld/v1/entities/{entity_id}/attrs", 
-                                         json=entity_attributes, headers=headers)
+        # Prepare the update payload, including only attributes that are known to exist
+        update_payload = {
+            "@context": NGSI_LD_CONTEXT,
+            "location": {
+                "type": "GeoProperty",  # Correct type for geographical data
+                "value": entity["location"]["value"]  # Assuming 'location' always exists
+            }
+        }
+        
+        if 'name' in json.loads(get_response.text):
+            update_payload["name"] = entity["name"]
+        
+        update_headers = {"Content-Type": "application/ld+json"}
+
+        update_response = requests.patch(f"{ORION_URL}/{entity_id}/attrs", 
+                                         json=update_payload, headers=update_headers)
+
         if update_response.status_code not in [204, 200]:
-            print(f"Error updating entity {entity_id}: {update_response.json()}")
+            print(f"Error updating entity {entity_id}: {update_response.status_code}")
+            print(f"Response: {update_response.text}")
         else:
             print(f"Successfully updated entity {entity_id}")
+
     elif get_response.status_code == 404:
         # The entity does not exist, so we create it
-        create_entity = {
-            "id": entity_id,
-            "type": entity_type,
-            **entity_attributes
-        }
-        create_response = requests.post(f"{ORION_URL}/ngsi-ld/v1/entities", 
-                                        json=create_entity, headers=headers)
+        create_headers = {"Content-Type": "application/ld+json"}
+        create_response = requests.post(ORION_URL, json=entity, headers=create_headers)
         if create_response.status_code not in [201, 204]:
-            print(f"Error creating entity {entity_id}: {create_response.json()}")
+            print(f"Error creating entity {entity_id}: {create_response.status_code}")
+            print(f"Response: {create_response.text}")
         else:
             print(f"Successfully created entity {entity_id}")
     else:
-        print(f"Error checking existence of entity {entity_id}: {get_response.json()}")
-
-
-
+        print(f"Unexpected status code {get_response.status_code} when checking entity existence: {get_response.text}")
 
 def send_to_orion(ngsi_data):
     for entity in ngsi_data:
         send_or_update_entity(entity)
-
-
-
 
 def fetch_and_send_data_to_orion():
     while True:
@@ -127,8 +134,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         elif url.path == '/data':
             self.send_response(200)
             self._set_headers()
-            orion_url = 'http://localhost:1026/v2/entities'
-            data = fetch_data_from_orion(orion_url)
+            data = fetch_data_from_orion(ORION_URL)
             print("Data fetched from Orion:", data)  # Log the data
             self.wfile.write(json.dumps(data).encode())
 
