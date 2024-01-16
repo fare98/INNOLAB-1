@@ -16,7 +16,7 @@ def fetch_data_from_orion(orion_url):
                     "name": item.get("https://uri.etsi.org/ngsi-ld/name", {}).get("value", "Unknown"),
                     "latitude": coordinates[1],
                     "longitude": coordinates[0],
-                    "url": "#"  # Adjust this if you have a URL field
+                     
                 })
         return processed_data
     except requests.RequestException as e:

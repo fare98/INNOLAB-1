@@ -19,7 +19,7 @@ def fetch_nasa_data():
 def transform_to_ngsi(nasa_data):
     ngsi_entities = []
     for item in nasa_data:
-        # Ensure that latitude and longitude are present
+        
         if 'geolocation' in item and 'latitude' in item['geolocation'] and 'longitude' in item['geolocation']:
             ngsi_entity = {
                 "id": f"urn:ngsi-ld:Asteroid:{item['id']}",
@@ -61,13 +61,13 @@ def send_or_update_entity(entity):
     get_response = requests.get(f"{ORION_URL}/{entity_id}", headers=headers)
 
     if get_response.status_code == 200:
-        # The entity already exists, so we update it
-        # Prepare the update payload, including only attributes that are known to exist
+        
+        # update payload, 
         update_payload = {
             "@context": NGSI_LD_CONTEXT,
             "location": {
-                "type": "GeoProperty",  # Correct type for geographical data
-                "value": entity["location"]["value"]  # Assuming 'location' always exists
+                "type": "GeoProperty",  
+                "value": entity["location"]["value"] 
             }
         }
         
@@ -86,7 +86,7 @@ def send_or_update_entity(entity):
             print(f"Successfully updated entity {entity_id}")
 
     elif get_response.status_code == 404:
-        # The entity does not exist, so we create it
+        # The entity does not exist
         create_headers = {"Content-Type": "application/ld+json"}
         create_response = requests.post(ORION_URL, json=entity, headers=create_headers)
         if create_response.status_code not in [201, 204]:
@@ -106,12 +106,12 @@ def fetch_and_send_data_to_orion():
         nasa_data = fetch_nasa_data()
         ngsi_data = transform_to_ngsi(nasa_data)
         send_to_orion(ngsi_data)
-        time.sleep(3600)  # Fetch data every hour, adjust as needed
+        time.sleep(3600)  # Fetch data every hour
 
-# Start the data fetching in a separate thread
+
 threading.Thread(target=fetch_and_send_data_to_orion, daemon=True).start()
 
-# HTTP server part
+#server
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 
     def _set_headers(self):
