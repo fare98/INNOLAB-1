@@ -1,0 +1,15 @@
+version: '3.3'
+services:
+  orion-ld:
+    image: fiware/orion-ld
+    ports:
+      - "1026:1026"
+    depends_on:
+      - mongo-db
+    command: -dbhost mongo-db
+
+  mongo-db:
+    image: mongo:4.4
+    command: --nojournal
+    ports:
+      - "27017:27017"
