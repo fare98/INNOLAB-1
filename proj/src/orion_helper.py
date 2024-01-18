@@ -16,6 +16,7 @@ def fetch_data_from_orion(orion_url):
                     "name": item.get("https://uri.etsi.org/ngsi-ld/name", {}).get("value", "Unknown"),
                     "latitude": coordinates[1],
                     "longitude": coordinates[0],
+                    "mass": item.get("mass", {}).get("value", 0)
                      
                 })
         return processed_data

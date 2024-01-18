@@ -28,7 +28,7 @@ fetch(dataEndpoint)
             const lon = parseFloat(record.longitude);
             if (!isNaN(lat) && !isNaN(lon)) {
                 L.marker([lat, lon]).addTo(map)
-                    .bindPopup(`<b>${record.name}</b><br>${record.url}`);
+                    .bindPopup(`<b>${record.name}</b><br>${record.mass}`);
             }
         });
     })
