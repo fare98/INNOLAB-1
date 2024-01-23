@@ -28,11 +28,12 @@ fetch(dataEndpoint)
             const lon = parseFloat(record.longitude);
             if (!isNaN(lat) && !isNaN(lon)) {
                 L.marker([lat, lon]).addTo(map)
-                    .bindPopup(`<b>${record.name}</b><br>${record.mass}`);
+                .bindPopup(`<b>${record.name}</b><br>Mass: ${record.mass}<br>Fall: ${record.fall}<br>Location: ${lat.toFixed(2)}, ${lon.toFixed(2)}`);
             }
         });
     })
     .catch(error => console.error('Error fetching data:', error));
+
 </script>
 </body>
 </html>
